@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>نظام إدارة العملاء</title>
+  <style>
+    /* ===== Design Tokens ===== */
+    :root{
+      --primary:#0d6efd;
+      --primary-600:#0b5bd3;
+      --surface:#ffffff;
+      --surface-2:#fafafa;
+      --bg:#f5f7fb;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --border:#e5e7eb;
+      --shadow:0 1px 3px rgba(0,0,0,.08),0 8px 24px rgba(0,0,0,.06);
+      --radius:12px;
+      --radius-sm:8px;
+      --gap:16px;
+      --gap-sm:10px;
+      --badge-new:#e3f2ff;
+      --badge-new-text:#0b5bd3;
+      --badge-open:#fff7e6;
+      --badge-open-text:#a86200;
+      --badge-closed:#e8fff0;
+      --badge-closed-text:#0a7a3b;
+      --toast-success-bg:#d4edda;
+      --toast-success-text:#155724;
+      --toast-error-bg:#fde8e8;
+      --toast-error-text:#b91c1c;
+
+      --fs-1: clamp(18px, 1.2vw + 14px, 24px); /* عنوان */
+      --fs-2: clamp(14px, 0.6vw + 12px, 18px); /* عناوين فرعية */
+      --fs-3: clamp(13px, 0.4vw + 11px, 16px); /* نص */
+      --fs-4: clamp(12px, 0.3vw + 10px, 14px); /* صغير */
+      --row-pad:12px;      /* مريح */
+      --row-pad-compact:6px; /* مضغوط */
+    }
+    /* Dark theme */
+    .theme-dark{
+      --surface:#0f172a;
+      --surface-2:#0b1224;
+      --bg:#0a1020;
+      --text:#e5e7eb;
+      --muted:#94a3b8;
+      --border:#1f2a44;
+      --shadow:none;
+      --badge-new:#0b2852;
+      --badge-new-text:#93c5fd;
+      --badge-open:#372800;
+      --badge-open-text:#ffdf99;
+      --badge-closed:#062914;
+      --badge-closed-text:#86efac;
+      --toast-success-bg:#053b22;
+      --toast-success-text:#bbf7d0;
+      --toast-error-bg:#3b0a0a;
+      --toast-error-text:#fecaca;
+    }
+
+    *{ box-sizing:border-box }
+    html,body{ height:100% }
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+      padding:16px;
+    }
+    .container{
+      max-width:1200px; margin:auto; background:var(--surface);
+      border-radius:var(--radius); box-shadow:var(--shadow);
+      padding:24px;
+    }
+    header{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      margin-bottom:16px;
+    }
+    header h1{
+      font-size:var(--fs-1); margin:0; letter-spacing:.2px;
+      color:var(--primary-600);
+    }
+    .header-actions{
+      display:flex; gap:8px; flex-wrap:wrap;
+    }
+    .chip{
+      border:1px solid var(--border); background:var(--surface-2);
+      border-radius:999px; padding:8px 12px; font-size:var(--fs-4);
+      cursor:default;
+    }
+
+    main{ display:grid; grid-template-columns:1fr; gap:24px; }
+
+    .section{
+      background:var(--surface-2); border:1px solid var(--border);
+      border-radius:var(--radius-sm); padding:16px;
+    }
+    .section h2{
+      font-size:var(--fs-2); margin:0 0 12px; padding-bottom:8px;
+      border-bottom:1px dashed var(--border);
+    }
+
+    /* Form */
+    .form-grid{
+      display:grid; gap:var(--gap);
+      grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+      margin-bottom:12px;
+    }
+    .form-group label{
+      display:block; font-weight:600; margin-bottom:6px; font-size:var(--fs-4);
+    }
+    .input, .select{
+      width:100%; padding:10px; border:1px solid var(--border);
+      border-radius:10px; background:var(--surface);
+      color:var(--text); font-size:var(--fs-3);
+      outline:0; transition:border-color .2s, box-shadow .2s;
+    }
+    .input:focus, .select:focus{ border-color:var(--primary); box-shadow:0 0 0 3px rgba(13,110,253,.15) }
+
+    .actions{ display:flex; gap:10px; flex-wrap:wrap }
+    .btn{
+      border:1px solid transparent; background:var(--primary); color:#fff;
+      padding:10px 14px; border-radius:10px; cursor:pointer;
+      font-size:var(--fs-3); transition:transform .03s ease, background-color .2s;
+    }
+    .btn:hover{ background:var(--primary-600) }
+    .btn:active{ transform:translateY(1px) }
+    .btn-secondary{
+      background:transparent; color:var(--text); border-color:var(--border);
+    }
+    .btn-muted{ background:#6c757d; }
+    .btn-warning{ background:#f59e0b }
+    .btn-danger{ background:#ef4444 }
+
+    /* Toolbar above list */
+    .toolbar{
+      display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;
+    }
+    .toolbar .spacer{ flex:1 }
+    .toggle-group{ display:flex; border:1px solid var(--border); border-radius:10px; overflow:hidden }
+    .toggle-group button{
+      background:transparent; border:0; padding:8px 12px; cursor:pointer;
+      font-size:var(--fs-4); color:var(--text);
+    }
+    .toggle-group button.active{ background:var(--primary); color:#fff }
+
+    /* Search */
+    .search-row{
+      display:flex; gap:10px; flex-wrap:wrap;
+    }
+    .search-row .input{ flex:1; min-width:220px }
+
+    /* Table */
+    .table-wrap{ position:relative; overflow:auto; border-radius:10px; border:1px solid var(--border); background:var(--surface) }
+    table{ width:100%; border-collapse:separate; border-spacing:0; min-width:900px }
+    thead th{
+      position:sticky; top:0; background:var(--surface-2);
+      border-bottom:1px solid var(--border); z-index:2;
+      padding:var(--row-pad); text-align:right; font-weight:700; font-size:var(--fs-4);
+    }
+    tbody td{
+      border-bottom:1px solid var(--border); padding:var(--row-pad); font-size:var(--fs-3);
+      vertical-align:middle;
+    }
+    tbody tr:hover{ background:rgba(13,110,253,.06) }
+    /* Density */
+    [data-density="compact"] thead th,
+    [data-density="compact"] tbody td{ padding:var(--row-pad-compact) }
+
+    /* Sticky first column on wide screens */
+    @media (min-width: 1100px){
+      thead th:first-child, tbody td:first-child{
+        position:sticky; right:0; z-index:3; background:inherit;
+        box-shadow:-1px 0 0 var(--border);
+      }
+    }
+
+    /* Responsive: hide less important cols on small screens */
+    /* Adjust nth-child indexes to match your columns exactly */
+    @media (max-width: 992px){
+      /* أخفِ: تسجيل الدخول, طلبات منتهية */
+      thead th:nth-child(11), tbody td:nth-child(11),
+      thead th:nth-child(10), tbody td:nth-child(10){ display:none }
+    }
+    @media (max-width: 768px){
+      /* أخفِ: طلبات مغلقة, قيد المعالجة */
+      thead th:nth-child(9), tbody td:nth-child(9),
+      thead th:nth-child(8), tbody td:nth-child(8){ display:none }
+    }
+    @media (max-width: 640px){
+      /* أخفِ: إجمالي الطلبات, طلبات جديدة, طلبات المستخدمين */
+      thead th:nth-child(6), tbody td:nth-child(6),
+      thead th:nth-child(7), tbody td:nth-child(7),
+      thead th:nth-child(5), tbody td:nth-child(5){ display:none }
+    }
+
+    /* Badges */
+    .badges{ display:flex; gap:6px; flex-wrap:wrap }
+    .badge{
+      display:inline-flex; align-items:center; gap:6px;
+      font-size:11px; padding:4px 8px; border-radius:999px;
+      border:1px solid transparent;
+    }
+    .badge.new{ background:var(--badge-new); color:var(--badge-new-text) }
+    .badge.open{ background:var(--badge-open); color:var(--badge-open-text) }
+    .badge.closed{ background:var(--badge-closed); color:var(--badge-closed-text) }
+
+    /* Actions cell */
+    .actions-cell{ display:flex; gap:6px; justify-content:center; flex-wrap:wrap }
+    .actions-cell .btn{ padding:6px 10px; font-size:12px; border-radius:8px }
+
+    /* Grid view (cards) */
+    .grid .table-wrap{ border:0; background:transparent; overflow:visible }
+    .grid table{ display:none } /* أخفِ الجدول */
+    .cards{
+      display:grid; gap:16px;
+      grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+    }
+    .card{
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--radius-sm); box-shadow:var(--shadow);
+      padding:14px; display:flex; flex-direction:column; gap:10px;
+      transition:transform .06s ease;
+    }
+    .card:hover{ transform:translateY(-1px) }
+    .card-head{ display:flex; align-items:center; justify-content:space-between; gap:8px }
+    .card-title{ font-weight:700; font-size:var(--fs-3) }
+    .card-sub{ color:var(--muted); font-size:var(--fs-4) }
+    .kv{ display:grid; grid-template-columns:1fr 1fr; gap:8px }
+    .kv .item{ display:flex; flex-direction:column; gap:4px; font-size:var(--fs-4) }
+    .kv .label{ color:var(--muted) }
+    .card-actions{
+      display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;
+      position:sticky; bottom:0; background:var(--surface); padding-top:6px;
+    }
+    .card-actions .btn{ flex:1 }
+
+    /* Toast */
+    .toast{
+      position:fixed; bottom:20px; inset-inline-end:20px; z-index:1000;
+      min-width:260px; max-width:70vw; padding:12px 14px; border-radius:10px;
+      box-shadow:var(--shadow); display:none; font-size:var(--fs-3);
+    }
+    .toast.show{ display:block }
+    .toast.success{ background:var(--toast-success-bg); color:var(--toast-success-text) }
+    .toast.error{ background:var(--toast-error-bg); color:var(--toast-error-text) }
+
+    /* Small tweaks */
+    .hint{ font-size:11px; color:var(--muted) }
+  </style>
+</head>
+<body>
+  <div class="container" id="app" data-density="comfortable">
+    <header>
+      <h1>نظام إدارة العملاء (CRM)</h1>
+      <div class="header-actions">
+        <span class="chip" title="عدد السجلات المعروضة">
+          العملاء: <b id="count">0</b>
+        </span>
+      </div>
+    </header>
+
+    <main>
+      <!-- Form -->
+      <section class="section">
+        <h2 id="formTitle">إضافة عميل جديد</h2>
+        <form id="addCustomerForm" novalidate>
+          <input type="hidden" id="customerRow" name="customerRow" />
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="id">الرقم التعريفي (ID)</label>
+              <input class="input" id="id" name="id" required />
+              <div class="hint">مثال: CUST-1001</div>
+            </div>
+            <div class="form-group">
+              <label for="name">الاسم الكامل</label>
+              <input class="input" id="name" name="name" required />
+            </div>
+            <div class="form-group">
+              <label for="email">البريد الإلكتروني</label>
+              <input class="input" type="email" id="email" name="email" />
+            </div>
+            <div class="form-group">
+              <label for="phone">رقم الهاتف</label>
+              <input class="input" id="phone" name="phone" pattern="^[0-9+\-\s]{6,}$" />
+            </div>
+            <div class="form-group">
+              <label for="companyName">اسم الشركة</label>
+              <input class="input" id="companyName" name="companyName" />
+            </div>
+          </div>
+          <div class="actions">
+            <button type="submit" class="btn" id="submitButton">إضافة عميل</button>
+            <button type="button" class="btn btn-secondary" id="cancelButton" style="display:none">إلغاء التعديل</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- List -->
+      <section class="section" id="listSection">
+        <h2>قائمة العملاء</h2>
+
+        <div class="toolbar" role="toolbar" aria-label="خيارات العرض">
+          <div class="toggle-group" role="group" aria-label="وضع العرض">
+            <button type="button" id="listViewBtn" aria-pressed="false">قائمة</button>
+            <button type="button" id="gridViewBtn" aria-pressed="false">شبكة</button>
+          </div>
+
+          <div class="toggle-group" role="group" aria-label="الكثافة">
+            <button type="button" id="comfortableBtn" class="active" aria-pressed="true">مريح</button>
+            <button type="button" id="compactBtn" aria-pressed="false">مضغوط</button>
+          </div>
+
+          <div class="spacer"></div>
+
+          <button type="button" class="btn btn-secondary" id="themeBtn" title="تبديل الوضع الداكن">الوضع الداكن</button>
+        </div>
+
+        <div class="search-row" role="search" aria-label="بحث العملاء">
+          <input class="input" id="searchInput" placeholder="ابحث بالاسم، الرقم التعريفي، أو الهاتف..." />
+          <button type="button" class="btn btn-secondary" id="clearSearchBtn">مسح</button>
+        </div>
+
+        <!-- LIST MODE -->
+        <div class="table-wrap" id="tableWrap" aria-live="polite">
+          <table id="customersTable">
+            <thead>
+              <tr>
+                <th scope="col">الرقم التعريفي</th>
+                <th scope="col">الاسم</th>
+                <th scope="col">الهاتف</th>
+                <th scope="col">اسم الشركة</th>
+                <th scope="col">طلبات المستخدمين</th>
+                <th scope="col">إجمالي الطلبات</th>
+                <th scope="col">طلبات جديدة</th>
+                <th scope="col">قيد المعالجة</th>
+                <th scope="col">طلبات مغلقة</th>
+                <th scope="col">طلبات منتهية</th>
+                <th scope="col">تسجيل الدخول</th>
+                <th scope="col" style="min-width:160px;text-align:center">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody><!-- rows --></tbody>
+          </table>
+        </div>
+
+        <!-- GRID MODE -->
+        <div class="cards" id="cards" style="display:none"><!-- cards --></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const apiUrl = '/api/customers';
+
+    // Elements
+    const app = document.getElementById('app');
+    const countEl = document.getElementById('count');
+
+    const form = document.getElementById('addCustomerForm');
+    const formTitle = document.getElementById('formTitle');
+    const submitButton = document.getElementById('submitButton');
+    const cancelButton = document.getElementById('cancelButton');
+    const customerRowInput = document.getElementById('customerRow');
+
+    const listSection = document.getElementById('listSection');
+    const tableWrap = document.getElementById('tableWrap');
+    const tbody = document.querySelector('#customersTable tbody');
+    const cards = document.getElementById('cards');
+
+    const listViewBtn = document.getElementById('listViewBtn');
+    const gridViewBtn = document.getElementById('gridViewBtn');
+    const comfortableBtn = document.getElementById('comfortableBtn');
+    const compactBtn = document.getElementById('compactBtn');
+    const themeBtn = document.getElementById('themeBtn');
+
+    const searchInput = document.getElementById('searchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+
+    const toast = document.getElementById('toast');
+
+    let allCustomers = [];
+    let searchAbort = null;
+
+    // ===== Helpers =====
+    function showToast(text, type){ // success | error
+      toast.textContent = text;
+      toast.className = `toast show ${type||''}`;
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => { toast.className = 'toast'; toast.textContent=''; }, 3500);
+    }
+    function setLoading(isLoading){
+      tableWrap.dataset.loading = isLoading ? '1':'0';
+      if(isLoading){
+        tableWrap.style.setProperty('--loading-label','"جارٍ التحميل..."');
+      }
+    }
+    function debounce(fn, delay){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), delay); }; }
+
+    // Build cells safely
+    function td(label, value){
+      const el = document.createElement('td');
+      el.setAttribute('data-label', label);
+      el.textContent = value == null ? '' : value;
+      return el;
+    }
+    function actionsCell(rowId, isCustomer){
+      const tdEl = document.createElement('td');
+      tdEl.className = 'actions-cell';
+      if(!isCustomer){ tdEl.textContent = '-'; return tdEl; }
+
+      const edit = document.createElement('button');
+      edit.type='button'; edit.className='btn btn-warning'; edit.textContent='تعديل';
+      edit.dataset.row = rowId;
+
+      const del = document.createElement('button');
+      del.type='button'; del.className='btn btn-danger'; del.textContent='حذف';
+      del.dataset.row = rowId;
+
+      tdEl.appendChild(edit); tdEl.appendChild(del);
+      return tdEl;
+    }
+
+    // ===== Fetch & Render =====
+    async function fetchCustomers(term='', signal){
+      try{
+        setLoading(true);
+        tbody.innerHTML = '';
+        cards.innerHTML = '';
+        let url = apiUrl;
+        if(term) url += `?search=${encodeURIComponent(term)}`;
+
+        const res = await fetch(url, { signal });
+        if(!res.ok) throw new Error('فشل في جلب بيانات العملاء');
+        allCustomers = await res.json();
+
+        countEl.textContent = allCustomers?.length || 0;
+
+        renderList(allCustomers);
+        renderGrid(allCustomers);
+
+        if(!allCustomers || allCustomers.length===0){
+          const tr = document.createElement('tr');
+          const tdEmpty = document.createElement('td');
+          tdEmpty.colSpan = 12; tdEmpty.style.textAlign='center';
+          tdEmpty.textContent = 'لا توجد بيانات مطابقة';
+          tr.appendChild(tdEmpty);
+          tbody.appendChild(tr);
+        }
+      }catch(e){
+        if(e.name==='AbortError') return;
+        console.error(e);
+        const tr = document.createElement('tr');
+        const tdErr = document.createElement('td');
+        tdErr.colSpan = 12; tdErr.style.textAlign='center'; tdErr.style.color='#b91c1c';
+        tdErr.textContent = 'تعذّر تحميل البيانات';
+        tr.appendChild(tdErr);
+        tbody.appendChild(tr);
+        showToast('تعذّر تحميل قائمة العملاء. تأكّد من أن الخادم يعمل.', 'error');
+      }finally{
+        setLoading(false);
+      }
+    }
+
+    function renderList(list){
+      tbody.innerHTML = '';
+      list.forEach(c=>{
+        const tr = document.createElement('tr');
+        tr.dataset.rowId = c.row;
+
+        const recordType = c.record_type != null ? c.record_type : c.recored_type;
+
+        tr.appendChild(td('الرقم التعريفي', c.id));
+        tr.appendChild(td('الاسم', c.name));
+        tr.appendChild(td('الهاتف', c.phone));
+        tr.appendChild(td('اسم الشركة', c.company_name));
+        tr.appendChild(td('طلبات المستخدمين', c['طلبات انشاء مستخدم']||0));
+        tr.appendChild(td('إجمالي الطلبات', c['الطلبات']||0));
+        tr.appendChild(td('طلبات جديدة', c['طلبات جديدة']||0));
+        tr.appendChild(td('قيد المعالجة', c['قيد المعالجة']||0));
+        tr.appendChild(td('طلبات مغلقة', c['طلبات مغلقة']||0));
+        tr.appendChild(td('طلبات منتهية', c['طلبات منتهية']||0));
+        tr.appendChild(td('تسجيل الدخول', c['تسجيل الدخول']||0));
+        tr.appendChild(actionsCell(c.row, recordType === 'customer'));
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderGrid(list){
+      cards.innerHTML = '';
+      list.forEach(c=>{
+        const recType = c.record_type != null ? c.record_type : c.recored_type;
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.rowId = c.row;
+
+        const head = document.createElement('div');
+        head.className = 'card-head';
+        const title = document.createElement('div');
+        title.className = 'card-title';
+        title.textContent = c.name || 'بدون اسم';
+        const sub = document.createElement('div');
+        sub.className = 'card-sub';
+        sub.textContent = c.id || '';
+        head.appendChild(title); head.appendChild(sub);
+
+        const badges = document.createElement('div');
+        badges.className = 'badges';
+        const b1 = document.createElement('span'); b1.className='badge new'; b1.textContent = `جديدة: ${c['طلبات جديدة']||0}`;
+        const b2 = document.createElement('span'); b2.className='badge open'; b2.textContent = `قيد المعالجة: ${c['قيد المعالجة']||0}`;
+        const b3 = document.createElement('span'); b3.className='badge closed'; b3.textContent = `مغلقة: ${c['طلبات مغلقة']||0}`;
+        badges.append(b1,b2,b3);
+
+        const grid = document.createElement('div');
+        grid.className = 'kv';
+        grid.innerHTML = `
+          <div class="item"><span class="label">الهاتف</span><span>${c.phone||'-'}</span></div>
+          <div class="item"><span class="label">الشركة</span><span>${c.company_name||'-'}</span></div>
+          <div class="item"><span class="label">إجمالي الطلبات</span><span>${c['الطلبات']||0}</span></div>
+          <div class="item"><span class="label">الدخول</span><span>${c['تسجيل الدخول']||0}</span></div>
+        `;
+
+        const actions = document.createElement('div');
+        actions.className = 'card-actions';
+        if(recType === 'customer'){
+          const edit = document.createElement('button');
+          edit.type='button'; edit.className='btn btn-warning'; edit.textContent='تعديل';
+          edit.dataset.row = c.row;
+          const del = document.createElement('button');
+          del.type='button'; del.className='btn btn-danger'; del.textContent='حذف';
+          del.dataset.row = c.row;
+          actions.append(edit, del);
+        }else{
+          const no = document.createElement('button');
+          no.type='button'; no.className='btn btn-secondary'; no.disabled=true; no.textContent='—';
+          actions.append(no);
+        }
+
+        card.append(head, badges, grid, actions);
+        cards.appendChild(card);
+      });
+    }
+
+    // ===== CRUD =====
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const fd = new FormData(form);
+      const payload = {
+        id: fd.get('id'),
+        name: fd.get('name'),
+        email: fd.get('email'),
+        phone: fd.get('phone'),
+        companyName: fd.get('companyName')
+      };
+
+      const rowId = customerRowInput.value;
+      const isEditing = !!rowId;
+      const url = isEditing ? `${apiUrl}/${rowId}` : apiUrl;
+      const method = isEditing ? 'PUT' : 'POST';
+      submitButton.disabled = true;
+
+      try{
+        const res = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const out = await res.json().catch(()=> ({}));
+        if(!res.ok) throw new Error(out.message || (isEditing?'فشل في تعديل العميل':'فشل في إضافة العميل'));
+
+        showToast(isEditing ? 'تم تعديل العميل بنجاح!' : 'تمت إضافة العميل بنجاح!', 'success');
+        resetFormForAdd();
+
+        const term = searchInput.value.trim();
+        await fetchCustomers(term, (searchAbort=new AbortController()).signal);
+      }catch(err){
+        showToast(err.message || 'حدث خطأ غير متوقع', 'error');
+      }finally{
+        submitButton.disabled = false;
+      }
+    });
+
+    function resetFormForAdd(){
+      form.reset();
+      customerRowInput.value = '';
+      formTitle.textContent = 'إضافة عميل جديد';
+      submitButton.textContent = 'إضافة عميل';
+      cancelButton.style.display = 'none';
+    }
+
+    cancelButton.addEventListener('click', resetFormForAdd);
+
+    // Delegate actions (list + grid)
+    document.addEventListener('click', (e)=>{
+      const t = e.target;
+      if(!(t instanceof HTMLElement)) return;
+      const row = t.dataset?.row;
+      if(!row) return;
+
+      if(t.classList.contains('btn-danger')){
+        if(confirm('هل تريد حذف هذا العميل؟')) deleteCustomer(row);
+      }else if(t.classList.contains('btn-warning')){
+        populateFormForEdit(row);
+      }
+    });
+
+    async function deleteCustomer(rowId){
+      try{
+        const res = await fetch(`${apiUrl}/${rowId}`, { method:'DELETE' });
+        const out = await res.json().catch(()=> ({}));
+        if(!res.ok) throw new Error(out.message || 'فشل في حذف العميل');
+
+        showToast('تم حذف العميل بنجاح.', 'success');
+        const term = searchInput.value.trim();
+        await fetchCustomers(term, (searchAbort=new AbortController()).signal);
+      }catch(err){
+        showToast(err.message || 'فشل في حذف العميل', 'error');
+      }
+    }
+
+    async function fetchCustomerDetails(rowId){
+      try{
+        const res = await fetch(`${apiUrl}/${rowId}`);
+        if(!res.ok) return null;
+        return await res.json();
+      }catch{ return null; }
+    }
+
+    async function populateFormForEdit(rowId){
+      const cached = allCustomers.find(c => String(c.row) === String(rowId));
+      const details = await fetchCustomerDetails(rowId);
+      const c = details || cached; if(!c) return;
+
+      form.id.value = c.id || '';
+      form.name.value = c.name || '';
+      form.email.value = c.email || '';
+      form.phone.value = c.phone || '';
+      form.companyName.value = c.company_name || '';
+      customerRowInput.value = c.row;
+
+      formTitle.textContent = 'تعديل بيانات العميل';
+      submitButton.textContent = 'تحديث البيانات';
+      cancelButton.style.display = '';
+      form.scrollIntoView({ behavior:'smooth' });
+    }
+
+    // ===== View toggles =====
+    function setView(mode){ // list | grid
+      const isGrid = mode==='grid';
+      listSection.classList.toggle('grid', isGrid);
+      document.getElementById('customersTable').style.display = isGrid ? 'none' : 'table';
+      tableWrap.style.display = isGrid ? 'none' : 'block';
+      cards.style.display = isGrid ? 'grid' : 'none';
+      listViewBtn.classList.toggle('active', !isGrid);
+      gridViewBtn.classList.toggle('active', isGrid);
+      listViewBtn.setAttribute('aria-pressed', String(!isGrid));
+      gridViewBtn.setAttribute('aria-pressed', String(isGrid));
+      localStorage.setItem('crmViewMode', mode);
+    }
+    listViewBtn.addEventListener('click', ()=> setView('list'));
+    gridViewBtn.addEventListener('click', ()=> setView('grid'));
+
+    function setDensity(mode){ // comfortable | compact
+      const compact = mode==='compact';
+      app.setAttribute('data-density', compact ? 'compact':'comfortable');
+      comfortableBtn.classList.toggle('active', !compact);
+      compactBtn.classList.toggle('active', compact);
+      comfortableBtn.setAttribute('aria-pressed', String(!compact));
+      compactBtn.setAttribute('aria-pressed', String(compact));
+      localStorage.setItem('crmDensity', mode);
+    }
+    comfortableBtn.addEventListener('click', ()=> setDensity('comfortable'));
+    compactBtn.addEventListener('click', ()=> setDensity('compact'));
+
+    // Theme toggle
+    function toggleTheme(){
+      document.documentElement.classList.toggle('theme-dark');
+      localStorage.setItem('crmTheme', document.documentElement.classList.contains('theme-dark') ? 'dark' : 'light');
+    }
+    themeBtn.addEventListener('click', toggleTheme);
+
+    // ===== Search with debounce & cancel =====
+    const debouncedSearch = debounce((term)=>{
+      if(searchAbort) searchAbort.abort();
+      searchAbort = new AbortController();
+      fetchCustomers(term, searchAbort.signal);
+    }, 350);
+
+    searchInput.addEventListener('input', e => debouncedSearch(e.target.value.trim()));
+    clearSearchBtn.addEventListener('click', ()=>{
+      searchInput.value = '';
+      debouncedSearch('');
+      searchInput.focus();
+    });
+
+    // ===== Init =====
+    (function init(){
+      // load prefs
+      const savedView = localStorage.getItem('crmViewMode');
+      const preferredView = savedView || (window.innerWidth <= 991 ? 'grid' : 'list');
+      setView(preferredView);
+
+      const savedDensity = localStorage.getItem('crmDensity') || 'comfortable';
+      setDensity(savedDensity);
+
+      const savedTheme = localStorage.getItem('crmTheme');
+      if(savedTheme==='dark') document.documentElement.classList.add('theme-dark');
+
+      // first load
+      if(searchAbort) searchAbort.abort();
+      searchAbort = new AbortController();
+      fetchCustomers('', searchAbort.signal);
+    })();
+  </script>
+</body>
+</html>
