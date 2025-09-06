@@ -57,12 +57,4 @@ button:hover {
     text-align: center;
 }
 
-#install-button {
-    margin-top: 10px;
-    background-color: #28a745;
-}
 
-#install-button:disabled {
-    background-color: #6c757d;
-    cursor: not-allowed;
-}
