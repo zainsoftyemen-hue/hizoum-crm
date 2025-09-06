@@ -16,7 +16,7 @@ const dbConfig = {
     database: process.env.DB_DATABASE,
     options: {
         encrypt: true, // Use true for cloud databases like Azure
-        trustServerCertificate: false // Recommended to be false in production
+        trustServerCertificate: true // Set to true to allow self-signed certificates
     }
 };
 
